@@ -1,0 +1,76 @@
+name: Upload Allure results to Testimony
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  TESTIMONY_BASE_URL: "${{ vars.TESTIMONY_BASE_URL }}"
+  TESTIMONY_PROJECT_SLUG: "${{ vars.TESTIMONY_PROJECT_SLUG }}"
+  TESTIMONY_API_KEY: "${{ secrets.TESTIMONY_API_KEY }}"
+  ALLURE_RESULTS_DIR: allure-results
+  TESTIMONY_RESULTS_ARCHIVE: "${{ runner.temp }}/allure-results.zip"
+
+jobs:
+  upload-allure-results:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Create an archive when only allure-results/ exists
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f "$TESTIMONY_RESULTS_ARCHIVE" ]]; then
+            echo "Using existing archive at $TESTIMONY_RESULTS_ARCHIVE"
+            exit 0
+          fi
+
+          if [[ ! -d "$ALLURE_RESULTS_DIR" ]]; then
+            echo "Expected an Allure results directory at $ALLURE_RESULTS_DIR or an archive at $TESTIMONY_RESULTS_ARCHIVE" >&2
+            exit 1
+          fi
+
+          mkdir -p "$(dirname "$TESTIMONY_RESULTS_ARCHIVE")"
+          (cd "$ALLURE_RESULTS_DIR" && zip -r "$TESTIMONY_RESULTS_ARCHIVE" .)
+
+      - name: Upload archive to Testimony
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${TESTIMONY_BASE_URL:-}" ]]; then
+            echo "TESTIMONY_BASE_URL must point at your Testimony server, for example http://127.0.0.1:18080" >&2
+            exit 1
+          fi
+
+          if [[ -z "${TESTIMONY_PROJECT_SLUG:-}" ]]; then
+            echo "TESTIMONY_PROJECT_SLUG must match the target project slug in Testimony" >&2
+            exit 1
+          fi
+
+          if [[ ! -s "$TESTIMONY_RESULTS_ARCHIVE" ]]; then
+            echo "Archive not found or empty: $TESTIMONY_RESULTS_ARCHIVE" >&2
+            exit 1
+          fi
+
+          curl_args=(
+            --fail
+            --show-error
+            --silent
+            --request POST
+            --header "Content-Type: application/zip"
+            --header "Content-Disposition: attachment; filename=\"$(basename "$TESTIMONY_RESULTS_ARCHIVE")\""
+            --data-binary "@$TESTIMONY_RESULTS_ARCHIVE"
+          )
+
+          if [[ -n "${TESTIMONY_API_KEY:-}" ]]; then
+            curl_args+=(--header "Authorization: Bearer ${TESTIMONY_API_KEY}")
+          fi
+
+          curl "${curl_args[@]}" \
+            "${TESTIMONY_BASE_URL%/}/api/v1/projects/${TESTIMONY_PROJECT_SLUG}/upload"

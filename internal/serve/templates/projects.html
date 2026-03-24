@@ -1,0 +1,46 @@
+{{define "projects"}}
+{{template "layout_start" .}}
+  <p class="eyebrow">Projects</p>
+  <h1>Browse generated reports</h1>
+  <p class="lede">Open a project to inspect report history and jump straight into ready Allure output served through Testimony.</p>
+
+  <div class="stats" aria-label="Project totals">
+    <div class="stat">
+      <span class="metric">{{.ProjectCount}}</span>
+      <span class="metric-label">Projects</span>
+    </div>
+    <div class="stat">
+      <span class="metric">{{.ReportCount}}</span>
+      <span class="metric-label">Reports</span>
+    </div>
+    <div class="stat">
+      <span class="metric">{{.ReadyReportCount}}</span>
+      <span class="metric-label">Ready reports</span>
+    </div>
+  </div>
+
+  {{if .Projects}}
+  <div class="stack project-grid" aria-label="Projects list">
+    {{range .Projects}}
+    <a class="card" href="{{.ProjectURL}}">
+      <div class="card-header">
+        <h2>{{.Slug}}</h2>
+        {{if .HasReports}}<span class="status-badge status-badge--{{.LatestStatusTone}}">{{.LatestStatusLabel}}</span>{{end}}
+      </div>
+      <p class="meta"><span class="subtle-list"><span><strong>{{.ReportCount}}</strong> reports</span><span>•</span><span><strong>{{.ReadyReportCount}}</strong> ready</span></span></p>
+      {{if .HasReports}}
+      <p>Latest update <time datetime="{{.LatestUpdatedISO}}">{{.LatestUpdatedText}}</time>.</p>
+      {{else}}
+      <p>No reports yet for this project.</p>
+      {{end}}
+    </a>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <h2>No projects yet</h2>
+    <p>Upload a results archive to create the first project and start browsing generated reports here.</p>
+  </div>
+  {{end}}
+{{template "layout_end" .}}
+{{end}}

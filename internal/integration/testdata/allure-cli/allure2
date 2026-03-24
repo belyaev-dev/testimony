@@ -1,0 +1,54 @@
+#!/bin/sh
+set -eu
+
+if [ "$1" != "generate" ]; then
+  echo "unexpected command: $*" >&2
+  exit 2
+fi
+
+RESULTS_DIR="$2"
+if [ "$3" != "--clean" ] || [ "$4" != "-o" ]; then
+  echo "unexpected args: $*" >&2
+  exit 3
+fi
+OUTPUT_DIR="$5"
+RESULT_FILE="$RESULTS_DIR/widgets-result.json"
+if [ ! -f "$RESULT_FILE" ]; then
+  echo "missing widgets-result.json" >&2
+  exit 4
+fi
+
+RUN_ID=$(sed -n 's/.*"run":"\([^"]*\)".*/\1/p' "$RESULT_FILE")
+if [ -z "$RUN_ID" ]; then
+  echo "missing run in widgets-result.json" >&2
+  exit 5
+fi
+
+mkdir -p "$OUTPUT_DIR/history"
+TMP_RUNS=$(mktemp)
+trap 'rm -f "$TMP_RUNS"' EXIT
+
+EXISTING_HISTORY="$RESULTS_DIR/history/history-trend.json"
+if [ -f "$EXISTING_HISTORY" ]; then
+  tr -d '[]' < "$EXISTING_HISTORY" | tr ',' '\n' | sed -n 's/^[[:space:]]*"\([^"]*\)"[[:space:]]*$/\1/p' > "$TMP_RUNS"
+fi
+
+if ! grep -qxF "$RUN_ID" "$TMP_RUNS" 2>/dev/null; then
+  printf '%s\n' "$RUN_ID" >> "$TMP_RUNS"
+fi
+
+JSON='['
+FIRST=1
+while IFS= read -r LINE; do
+  [ -n "$LINE" ] || continue
+  if [ "$FIRST" -eq 0 ]; then
+    JSON="$JSON,"
+  fi
+  JSON="$JSON\"$LINE\""
+  FIRST=0
+done < "$TMP_RUNS"
+JSON="$JSON]"
+
+printf '%s\n' "$JSON" > "$OUTPUT_DIR/history/history-trend.json"
+printf '{"runs":%s}\n' "$JSON" > "$OUTPUT_DIR/history/history.json"
+printf '<html>allure2 %s</html>\n' "$RUN_ID" > "$OUTPUT_DIR/index.html"

@@ -1,0 +1,12 @@
+.git
+.gsd
+.bg-shell
+.DS_Store
+*.log
+*.tmp
+*.swp
+*.swo
+coverage/
+dist/
+build/
+tmp/

@@ -1,0 +1,129 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "testimony.fullname" . }}
+  labels:
+    {{- include "testimony.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "testimony.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "testimony.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: testimony
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.runtime.server.port }}
+              protocol: TCP
+          env:
+            - name: TESTIMONY_LOG_LEVEL
+              value: {{ .Values.runtime.logLevel | quote }}
+            - name: TESTIMONY_SERVER_HOST
+              value: {{ .Values.runtime.server.host | quote }}
+            - name: TESTIMONY_SERVER_PORT
+              value: {{ .Values.runtime.server.port | quote }}
+            - name: TESTIMONY_SERVER_READ_TIMEOUT
+              value: {{ .Values.runtime.server.readTimeout | quote }}
+            - name: TESTIMONY_SERVER_WRITE_TIMEOUT
+              value: {{ .Values.runtime.server.writeTimeout | quote }}
+            - name: TESTIMONY_SERVER_IDLE_TIMEOUT
+              value: {{ .Values.runtime.server.idleTimeout | quote }}
+            - name: TESTIMONY_S3_ENDPOINT
+              value: {{ .Values.runtime.s3.endpoint | quote }}
+            - name: TESTIMONY_S3_REGION
+              value: {{ .Values.runtime.s3.region | quote }}
+            - name: TESTIMONY_S3_BUCKET
+              value: {{ .Values.runtime.s3.bucket | quote }}
+            - name: TESTIMONY_S3_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "testimony.secretName" . }}
+                  key: s3-access-key-id
+            - name: TESTIMONY_S3_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "testimony.secretName" . }}
+                  key: s3-secret-access-key
+            - name: TESTIMONY_S3_USE_PATH_STYLE
+              value: {{ .Values.runtime.s3.usePathStyle | quote }}
+            - name: TESTIMONY_SQLITE_PATH
+              value: {{ .Values.runtime.sqlite.path | quote }}
+            - name: TESTIMONY_SQLITE_BUSY_TIMEOUT
+              value: {{ .Values.runtime.sqlite.busyTimeout | quote }}
+            - name: TESTIMONY_AUTH_ENABLED
+              value: {{ .Values.runtime.auth.enabled | quote }}
+            - name: TESTIMONY_AUTH_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "testimony.secretName" . }}
+                  key: auth-api-key
+                  optional: true
+            - name: TESTIMONY_AUTH_REQUIRE_VIEWER
+              value: {{ .Values.runtime.auth.requireViewer | quote }}
+            - name: TESTIMONY_RETENTION_DAYS
+              value: {{ .Values.runtime.retention.days | quote }}
+            - name: TESTIMONY_RETENTION_CLEANUP_INTERVAL
+              value: {{ .Values.runtime.retention.cleanupInterval | quote }}
+            - name: TESTIMONY_GENERATE_VARIANT
+              value: {{ .Values.runtime.generate.variant | quote }}
+            - name: TESTIMONY_GENERATE_CLI_PATH
+              value: {{ .Values.runtime.generate.cliPath | quote }}
+            - name: TESTIMONY_GENERATE_TIMEOUT
+              value: {{ .Values.runtime.generate.timeout | quote }}
+            - name: TESTIMONY_GENERATE_MAX_CONCURRENCY
+              value: {{ .Values.runtime.generate.maxConcurrency | quote }}
+            - name: TESTIMONY_GENERATE_HISTORY_DEPTH
+              value: {{ .Values.runtime.generate.historyDepth | quote }}
+            - name: TESTIMONY_TEMP_DIR
+              value: {{ .Values.runtime.tempDir | quote }}
+            - name: TESTIMONY_SHUTDOWN_DRAIN_DELAY
+              value: {{ .Values.runtime.shutdown.readyzDrainDelay | quote }}
+            - name: TESTIMONY_SHUTDOWN_TIMEOUT
+              value: {{ .Values.runtime.shutdown.timeout | quote }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path | quote }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path | quote }}
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- if .Values.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.persistence.mountPath | quote }}
+          {{- end }}
+      {{- if .Values.persistence.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "testimony.pvcName" . }}
+      {{- end }}

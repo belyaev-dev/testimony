@@ -1,0 +1,97 @@
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/testimony-dev/testimony
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  fsGroup: 10001
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  runAsGroup: 10001
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+runtime:
+  logLevel: info
+  server:
+    host: 0.0.0.0
+    port: 8080
+    readTimeout: 15s
+    writeTimeout: 30s
+    idleTimeout: 60s
+  s3:
+    endpoint: https://s3.example.com
+    region: us-east-1
+    bucket: testimony
+    usePathStyle: false
+  sqlite:
+    path: /var/lib/testimony/data/testimony.sqlite
+    busyTimeout: 5s
+  auth:
+    enabled: false
+    requireViewer: false
+  retention:
+    days: 0
+    cleanupInterval: 1h
+  generate:
+    variant: allure2
+    cliPath: /usr/local/bin/allure
+    timeout: 2m
+    maxConcurrency: 2
+    historyDepth: 5
+  tempDir: /var/lib/testimony/tmp
+  shutdown:
+    readyzDrainDelay: 5s
+    timeout: 30s
+
+secrets:
+  existingSecretName: ""
+  s3AccessKeyId: change-me
+  s3SecretAccessKey: change-me
+  authAPIKey: ""
+
+persistence:
+  enabled: true
+  mountPath: /var/lib/testimony
+  accessModes:
+    - ReadWriteOnce
+  size: 8Gi
+  storageClassName: ""
+
+probes:
+  liveness:
+    path: /healthz
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 2
+    failureThreshold: 3
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 2
+    failureThreshold: 3

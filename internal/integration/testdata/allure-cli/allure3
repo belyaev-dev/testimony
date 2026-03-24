@@ -1,0 +1,44 @@
+#!/bin/sh
+set -eu
+
+if [ "$1" != "generate" ]; then
+  echo "unexpected command: $*" >&2
+  exit 2
+fi
+
+RESULTS_DIR="$2"
+CONFIG_FILE="./allurerc.json"
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "missing allurerc.json" >&2
+  exit 3
+fi
+
+OUTPUT_DIR=$(sed -n 's/.*"output":"\([^"]*\)".*/\1/p' "$CONFIG_FILE")
+HISTORY_PATH=$(sed -n 's/.*"historyPath":"\([^"]*\)".*/\1/p' "$CONFIG_FILE")
+RESULT_FILE="$RESULTS_DIR/widgets-result.json"
+if [ ! -f "$RESULT_FILE" ]; then
+  echo "missing widgets-result.json" >&2
+  exit 4
+fi
+if [ -z "$OUTPUT_DIR" ]; then
+  echo "missing output in config" >&2
+  exit 5
+fi
+
+RUN_ID=$(sed -n 's/.*"run":"\([^"]*\)".*/\1/p' "$RESULT_FILE")
+if [ -z "$RUN_ID" ]; then
+  echo "missing run in widgets-result.json" >&2
+  exit 6
+fi
+
+mkdir -p "$OUTPUT_DIR/history"
+TARGET_HISTORY="$OUTPUT_DIR/history/history.jsonl"
+TMP_HISTORY=$(mktemp)
+trap 'rm -f "$TMP_HISTORY"' EXIT
+
+if [ -n "$HISTORY_PATH" ] && [ -f "$HISTORY_PATH" ]; then
+  cat "$HISTORY_PATH" > "$TMP_HISTORY"
+fi
+printf '%s\n' "$RUN_ID" >> "$TMP_HISTORY"
+awk 'NF && !seen[$0]++ { print }' "$TMP_HISTORY" > "$TARGET_HISTORY"
+printf '<html>allure3 %s</html>\n' "$RUN_ID" > "$OUTPUT_DIR/index.html"

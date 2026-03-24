@@ -1,0 +1,65 @@
+{{define "reports"}}
+{{template "layout_start" .}}
+  <nav class="breadcrumbs" aria-label="Breadcrumbs">
+    <a href="/">Projects</a>
+    <span>/</span>
+    <span>{{.ProjectSlug}}</span>
+  </nav>
+
+  {{if .Missing}}
+  <p class="eyebrow">Missing project</p>
+  <h1>Project not found</h1>
+  <p class="lede">No project named <strong>{{.ProjectSlug}}</strong> exists yet. Check the URL or upload a report archive first.</p>
+  <div class="empty-state">
+    <h2>Nothing to browse yet</h2>
+    <p>Known projects appear on the root page as soon as the first upload for that slug is accepted.</p>
+  </div>
+  {{else}}
+  <p class="eyebrow">Project history</p>
+  <h1>{{.ProjectSlug}}</h1>
+  <p class="lede">Browse historical report runs for this project. Ready reports open the proxied Allure UI from the same Testimony server.</p>
+
+  <div class="stats" aria-label="Report totals">
+    <div class="stat">
+      <span class="metric">{{.ReportCount}}</span>
+      <span class="metric-label">Reports</span>
+    </div>
+  </div>
+
+  {{if .Reports}}
+  <div class="stack" aria-label="Project report history">
+    {{range .Reports}}
+    <article class="report-row">
+      <div class="report-header">
+        <span class="report-id">{{.ID}}</span>
+        <span class="status-badge status-badge--{{.StatusTone}}">{{.StatusLabel}}</span>
+      </div>
+      <div class="report-copy">
+        <p class="timestamp">Created <time datetime="{{.CreatedAtISO}}">{{.CreatedAtText}}</time>{{if .CompletedAtText}} · Completed <time datetime="{{.CompletedAtISO}}">{{.CompletedAtText}}</time>{{end}}</p>
+        {{if .SourceFilename}}<p>Source archive: <strong>{{.SourceFilename}}</strong></p>{{end}}
+        {{if .CanBrowse}}
+        <p class="hint">This report is ready to browse through the proxy route.</p>
+        {{else}}
+        <p class="hint">This report is not ready yet, so browsing stays disabled until generation completes.</p>
+        {{end}}
+      </div>
+      <div class="report-footer">
+        <span class="hint">Status: {{.StatusLabel}}</span>
+        {{if .CanBrowse}}
+        <a class="button-link" href="{{.BrowseURL}}">Open report</a>
+        {{else}}
+        <span class="hint">Available when ready</span>
+        {{end}}
+      </div>
+    </article>
+    {{end}}
+  </div>
+  {{else}}
+  <div class="empty-state">
+    <h2>No reports yet</h2>
+    <p>This project exists, but it does not have any uploaded reports to browse yet.</p>
+  </div>
+  {{end}}
+  {{end}}
+{{template "layout_end" .}}
+{{end}}

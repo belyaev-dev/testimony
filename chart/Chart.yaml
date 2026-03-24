@@ -1,0 +1,6 @@
+apiVersion: v2
+name: testimony
+description: Deploy the Testimony runtime against an external S3-compatible backend.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
