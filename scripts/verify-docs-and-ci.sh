@@ -9,6 +9,9 @@ CONFIG_FILE="$ROOT_DIR/docs/configuration.md"
 CI_README_FILE="$ROOT_DIR/examples/ci/README.md"
 GITHUB_CI_FILE="$ROOT_DIR/examples/ci/github-actions-upload.yml"
 GITLAB_CI_FILE="$ROOT_DIR/examples/ci/gitlab-ci-upload.yml"
+GITHUB_REPOSITORY_GUIDE_FILE="$ROOT_DIR/docs/github-repository.md"
+GITHUB_WORKFLOW_CI_FILE="$ROOT_DIR/.github/workflows/ci.yml"
+GITHUB_WORKFLOW_COMPOSE_FILE="$ROOT_DIR/.github/workflows/compose-smoke.yml"
 
 log() {
   printf '[verify-docs-and-ci] %s\n' "$*"
@@ -47,7 +50,9 @@ assert_repo_has_no_placeholders() {
     "$CONTRIBUTING_FILE" \
     "$ARCHITECTURE_FILE" \
     "$CONFIG_FILE" \
-    "$ROOT_DIR/examples/ci"; then
+    "$GITHUB_REPOSITORY_GUIDE_FILE" \
+    "$ROOT_DIR/examples/ci" \
+    "$ROOT_DIR/.github/workflows"; then
     echo 'found TODO/TBD placeholder text in docs or CI examples' >&2
     exit 1
   fi
@@ -56,7 +61,9 @@ assert_repo_has_no_placeholders() {
 parse_ci_yaml() {
   ruby -e 'require "yaml"; ARGV.each { |path| YAML.load_file(path) }' \
     "$GITHUB_CI_FILE" \
-    "$GITLAB_CI_FILE"
+    "$GITLAB_CI_FILE" \
+    "$GITHUB_WORKFLOW_CI_FILE" \
+    "$GITHUB_WORKFLOW_COMPOSE_FILE"
 }
 
 main() {
@@ -72,6 +79,9 @@ main() {
   assert_non_empty_file "$CI_README_FILE"
   assert_non_empty_file "$GITHUB_CI_FILE"
   assert_non_empty_file "$GITLAB_CI_FILE"
+  assert_non_empty_file "$GITHUB_REPOSITORY_GUIDE_FILE"
+  assert_non_empty_file "$GITHUB_WORKFLOW_CI_FILE"
+  assert_non_empty_file "$GITHUB_WORKFLOW_COMPOSE_FILE"
 
   log "checking README landing-page sections and links"
   assert_file_contains "$README_FILE" '## Features' 'README should include a Features section'
@@ -87,6 +97,8 @@ main() {
   assert_file_contains "$README_FILE" '## Configuration' 'README should include configuration guidance'
   assert_file_contains "$README_FILE" '[docs/architecture.md](docs/architecture.md)' 'README should link to the architecture guide'
   assert_file_contains "$README_FILE" '[docs/configuration.md](docs/configuration.md)' 'README should link to the configuration guide'
+  assert_file_contains "$README_FILE" '## GitHub repository baseline' 'README should explain the repository-level GitHub baseline'
+  assert_file_contains "$README_FILE" '[docs/github-repository.md](docs/github-repository.md)' 'README should link to the GitHub repository guide'
   assert_file_contains "$README_FILE" '[CONTRIBUTING.md](CONTRIBUTING.md)' 'README should link to CONTRIBUTING.md'
   assert_file_contains "$README_FILE" '[examples/ci/](examples/ci/)' 'README should link to the CI examples directory'
 
@@ -109,8 +121,24 @@ main() {
   assert_file_contains "$CI_README_FILE" 'TESTIMONY_PROJECT_SLUG' 'CI README should document the project slug variable'
   assert_file_contains "$CI_README_FILE" 'TESTIMONY_API_KEY' 'CI README should document the optional API key variable'
 
-  log "parsing CI example YAML"
+  log "checking GitHub repository baseline guide"
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '## Do we need GitHub CI in this repository?' 'GitHub repository guide should answer whether this repository needs CI'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '.github/workflows/ci.yml' 'GitHub repository guide should reference the CI workflow'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '.github/workflows/compose-smoke.yml' 'GitHub repository guide should reference the Compose smoke workflow'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'Do **not** add a full release workflow yet.' 'GitHub repository guide should document the deferred release stance'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'Single-binary service for publishing Allure reports without turning your CI runner into a report host.' 'GitHub repository guide should include the proposed repository description'
+
+  log "parsing CI example and workflow YAML"
   parse_ci_yaml
+
+  log "checking GitHub workflow commands"
+  assert_file_contains "$GITHUB_WORKFLOW_CI_FILE" 'go test ./... -p 1' 'CI workflow should run the Go test suite'
+  assert_file_contains "$GITHUB_WORKFLOW_CI_FILE" 'bash scripts/verify-docs-and-ci.sh' 'CI workflow should verify docs and CI examples'
+  assert_file_contains "$GITHUB_WORKFLOW_CI_FILE" 'bash scripts/verify-helm-chart.sh' 'CI workflow should verify the Helm chart'
+  assert_file_contains "$GITHUB_WORKFLOW_CI_FILE" 'actions/setup-go@v6' 'CI workflow should pin setup-go v6'
+  assert_file_contains "$GITHUB_WORKFLOW_CI_FILE" 'actions/checkout@v5' 'CI workflow should pin checkout v5'
+  assert_file_contains "$GITHUB_WORKFLOW_COMPOSE_FILE" 'bash scripts/verify-compose-e2e.sh' 'Compose workflow should run the compose smoke verifier'
+  assert_file_contains "$GITHUB_WORKFLOW_COMPOSE_FILE" 'actions/checkout@v5' 'Compose workflow should pin checkout v5'
 
   log "checking CI example upload contract strings"
   rg -n '/api/v1/projects/.+/upload|TESTIMONY_BASE_URL|TESTIMONY_PROJECT_SLUG|Authorization: Bearer|Content-Type: application/zip' \

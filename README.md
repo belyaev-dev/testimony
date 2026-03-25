@@ -216,10 +216,15 @@ When something goes wrong, prefer the built-in inspection surfaces before diggin
 - `bash scripts/verify-compose-e2e.sh` — exercises the packaged local stack and prints compose diagnostics on failure
 - `bash scripts/verify-helm-chart.sh` — runs `helm lint` and `helm template`, then asserts the rendered manifest still matches the env-first runtime contract
 
+## GitHub repository baseline
+
+The CI upload examples under [examples/ci/](examples/ci/) are meant for downstream repositories, but this repository still needs its own GitHub automation and metadata baseline. See [docs/github-repository.md](docs/github-repository.md) for the current repository-level recommendation: what to run in GitHub Actions now, what to defer until release policy is stable, and the proposed GitHub description/website/topics values.
+
 ## Repository guide
 
 - [docs/architecture.md](docs/architecture.md) — runtime topology, request/data flow, storage layout, and observability surfaces
 - [docs/configuration.md](docs/configuration.md) — full `TESTIMONY_*` configuration reference
+- [docs/github-repository.md](docs/github-repository.md) — repository-level GitHub CI, release, and metadata baseline
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contributor workflow, verification commands, and PR expectations
 - [examples/ci/](examples/ci/) — GitHub Actions and GitLab CI upload examples
 - [LICENSE](LICENSE) — Apache-2.0 license
