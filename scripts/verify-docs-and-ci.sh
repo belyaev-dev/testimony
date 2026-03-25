@@ -13,6 +13,7 @@ GITHUB_REPOSITORY_GUIDE_FILE="$ROOT_DIR/docs/github-repository.md"
 RELEASE_GUIDE_FILE="$ROOT_DIR/docs/release-guide.md"
 GITHUB_WORKFLOW_CI_FILE="$ROOT_DIR/.github/workflows/ci.yml"
 GITHUB_WORKFLOW_COMPOSE_FILE="$ROOT_DIR/.github/workflows/compose-smoke.yml"
+GITHUB_WORKFLOW_RELEASE_FILE="$ROOT_DIR/.github/workflows/release.yml"
 
 log() {
   printf '[verify-docs-and-ci] %s\n' "$*"
@@ -129,8 +130,9 @@ main() {
   assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '## Do we need GitHub CI in this repository?' 'GitHub repository guide should answer whether this repository needs CI'
   assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '.github/workflows/ci.yml' 'GitHub repository guide should reference the CI workflow'
   assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '.github/workflows/compose-smoke.yml' 'GitHub repository guide should reference the Compose smoke workflow'
-  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'Do **not** add a full release workflow yet.' 'GitHub repository guide should document the deferred release stance'
-  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'Single-binary service for publishing Allure reports without turning your CI runner into a report host.' 'GitHub repository guide should include the proposed repository description'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '.github/workflows/release.yml' 'GitHub repository guide should reference the release workflow'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'GHCR tag policy' 'GitHub repository guide should document the image tagging policy'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'Single-binary service for publishing Allure reports without turning your CI runner into a report host.' 'GitHub repository guide should include the repository description'
   assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '[docs/release-guide.md](release-guide.md)' 'GitHub repository guide should link to the release guide'
 
   log "checking release guide"
@@ -152,6 +154,12 @@ main() {
   assert_file_contains "$GITHUB_WORKFLOW_CI_FILE" 'actions/checkout@v5' 'CI workflow should pin checkout v5'
   assert_file_contains "$GITHUB_WORKFLOW_COMPOSE_FILE" 'bash scripts/verify-compose-e2e.sh' 'Compose workflow should run the compose smoke verifier'
   assert_file_contains "$GITHUB_WORKFLOW_COMPOSE_FILE" 'actions/checkout@v5' 'Compose workflow should pin checkout v5'
+  assert_file_contains "$GITHUB_WORKFLOW_RELEASE_FILE" "tags:" 'Release workflow should trigger on tags'
+  assert_file_contains "$GITHUB_WORKFLOW_RELEASE_FILE" 'docker/login-action@v3' 'Release workflow should log in to GHCR'
+  assert_file_contains "$GITHUB_WORKFLOW_RELEASE_FILE" 'docker/build-push-action@v7' 'Release workflow should build and push container images'
+  assert_file_contains "$GITHUB_WORKFLOW_RELEASE_FILE" 'platforms: linux/amd64,linux/arm64' 'Release workflow should publish multi-arch images'
+  assert_file_contains "$GITHUB_WORKFLOW_RELEASE_FILE" 'latest-allure3' 'Release workflow should publish the Allure 3 variant tags'
+  assert_file_contains "$GITHUB_WORKFLOW_RELEASE_FILE" 'gh release create' 'Release workflow should publish a GitHub Release'
 
   log "checking CI example upload contract strings"
   rg -n '/api/v1/projects/.+/upload|TESTIMONY_BASE_URL|TESTIMONY_PROJECT_SLUG|Authorization: Bearer|Content-Type: application/zip' \

@@ -1,32 +1,40 @@
 # Release guide
 
-This repository does **not** have tag-driven release automation yet.
+This repository now ships a tag-driven GitHub Actions release workflow in [`.github/workflows/release.yml`](../.github/workflows/release.yml).
 
-Until a dedicated release workflow exists, releases should stay explicit and manual so the tag, notes, and distribution story do not drift away from the repository reality.
+The release path is automated, but the release contract is still strict: a tag is not considered valid unless the repository verification gates pass on that exact ref.
 
 ## Current release policy
 
 - CI is required on pull requests and on `main`.
-- Release automation is intentionally deferred.
-- A release should only be cut from `main` after the verification surface below passes.
-- GitHub Releases, tags, and any future container publication should follow one documented version for the repository.
+- Releases are cut from annotated semantic-version tags.
+- The `Release` workflow re-runs the repository verification gates before publishing anything.
+- A release publishes both GitHub Release assets and GHCR container images.
 
-## What counts as release-ready
+## What the release workflow publishes
 
-Before creating a version tag, run the repository-owned verification commands from a clean checkout:
+When you push a tag like `v1.2.3`, `.github/workflows/release.yml` will:
 
-```bash
-go test ./... -p 1
-bash scripts/verify-docs-and-ci.sh
-bash scripts/verify-helm-chart.sh
-bash scripts/verify-compose-e2e.sh
-```
-
-A release is not ready if any of these fail.
+1. run:
+   - `go test ./... -p 1`
+   - `bash scripts/verify-docs-and-ci.sh`
+   - `bash scripts/verify-helm-chart.sh`
+   - `bash scripts/verify-compose-e2e.sh`
+2. build release archives for:
+   - `linux/amd64`
+   - `linux/arm64`
+   - `darwin/amd64`
+   - `darwin/arm64`
+   - `windows/amd64`
+3. generate `SHA256SUMS`
+4. publish two multi-arch GHCR images (`linux/amd64`, `linux/arm64`):
+   - default runtime image from `Dockerfile`
+   - alternate runtime image from `Dockerfile.allure3`
+5. create or update the matching GitHub Release and attach the built assets
 
 ## Versioning and tagging
 
-Until the project adopts a different rule, use semantic version tags:
+Use annotated semantic-version tags:
 
 - `v0.1.0`
 - `v0.2.0`
@@ -38,20 +46,38 @@ Guidance:
 - bump **minor** for backward-compatible features
 - bump **major** for breaking API, config, or deployment changes
 
-Create annotated tags, not lightweight tags.
+Do not use lightweight tags for releases.
 
-## Manual release flow
+## GHCR tag policy
+
+For a release tag `vX.Y.Z`, the workflow publishes:
+
+### Default runtime image
+
+- `ghcr.io/belyaev-dev/testimony:vX.Y.Z`
+- `ghcr.io/belyaev-dev/testimony:vX.Y`
+- `ghcr.io/belyaev-dev/testimony:vX`
+- `ghcr.io/belyaev-dev/testimony:latest`
+
+### Allure 3 runtime image
+
+- `ghcr.io/belyaev-dev/testimony:vX.Y.Z-allure3`
+- `ghcr.io/belyaev-dev/testimony:vX.Y-allure3`
+- `ghcr.io/belyaev-dev/testimony:vX-allure3`
+- `ghcr.io/belyaev-dev/testimony:latest-allure3`
+
+The unsuffixed image is the default runtime. The `-allure3` suffix marks the alternate runtime explicitly.
+
+## Standard release flow
 
 ### 1. Confirm `main` is the exact release commit
-
-Make sure the release commit is already merged to `main` and that local `main` matches the remote.
 
 ```bash
 git checkout main
 git pull --ff-only origin main
 ```
 
-### 2. Run the release verification suite
+### 2. Run the release verification suite locally first
 
 ```bash
 go test ./... -p 1
@@ -74,49 +100,28 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin vX.Y.Z
 ```
 
-### 5. Create the GitHub Release entry
+That push triggers the GitHub `Release` workflow.
 
-Create a GitHub Release from the pushed tag and include:
+## Manual re-run flow
 
-- a short summary of what changed
-- notable operator-facing changes
-- breaking changes or migration notes, if any
-- verification commands used for the release
+The workflow also supports manual dispatch against an existing tag. Use this only when you need to recreate release assets or recover a failed publication without inventing a new version.
 
-Until automation exists, this step is manual.
+## Release asset expectations
 
-## Release notes template
+Each release should end up with:
 
-Use this structure for the GitHub Release body:
+- platform archives for the supported OS/architecture targets
+- `SHA256SUMS`
+- a GitHub Release named after the tag
+- GHCR images for the default and `-allure3` variants
 
-```markdown
-## Summary
-- <one-line release summary>
+## Troubleshooting
 
-## What changed
-- <change 1>
-- <change 2>
+If a release fails:
 
-## Operator impact
-- <deployment/config/runtime note>
+1. inspect the failed `Release` workflow run in GitHub Actions
+2. confirm the tag points to the intended commit
+3. rerun the verification commands locally
+4. use manual workflow dispatch against the same tag only after the underlying issue is fixed
 
-## Verification
-- `go test ./... -p 1`
-- `bash scripts/verify-docs-and-ci.sh`
-- `bash scripts/verify-helm-chart.sh`
-- `bash scripts/verify-compose-e2e.sh`
-
-## Breaking changes
-- None.
-```
-
-## Future automation target
-
-When repository metadata, versioning expectations, and distribution targets are stable, replace the manual path above with a tag-triggered release workflow that:
-
-1. re-runs the release verification gates
-2. builds the release binary
-3. publishes the container image to GHCR, if that remains the chosen distribution path
-4. creates the GitHub Release with generated notes plus checksums/assets
-
-Until then, keep the release path simple, observable, and manual.
+Do not move or retag an existing released version to hide a bad build. Cut a new version instead.

@@ -225,7 +225,7 @@ The CI upload examples under [examples/ci/](examples/ci/) are meant for downstre
 - [docs/architecture.md](docs/architecture.md) — runtime topology, request/data flow, storage layout, and observability surfaces
 - [docs/configuration.md](docs/configuration.md) — full `TESTIMONY_*` configuration reference
 - [docs/github-repository.md](docs/github-repository.md) — repository-level GitHub CI, release, and metadata baseline
-- [docs/release-guide.md](docs/release-guide.md) — current manual release process and future automation target
+- [docs/release-guide.md](docs/release-guide.md) — tag-driven release workflow, GHCR tag policy, and release operator guide
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contributor workflow, verification commands, and PR expectations
 - [examples/ci/](examples/ci/) — GitHub Actions and GitLab CI upload examples
 - [LICENSE](LICENSE) — Apache-2.0 license
