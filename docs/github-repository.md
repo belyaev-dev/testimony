@@ -46,7 +46,7 @@ Once those are stable, the next GitHub automation step should be a tag-based rel
 2. publishes the container image to GHCR
 3. attaches release notes and checksums to a GitHub Release
 
-Until then, CI is mandatory; release automation is intentionally deferred.
+Until then, CI is mandatory; release automation is intentionally deferred. The current manual release path is documented in [docs/release-guide.md](release-guide.md).
 
 ## Suggested GitHub repository metadata
 

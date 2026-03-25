@@ -10,6 +10,7 @@ CI_README_FILE="$ROOT_DIR/examples/ci/README.md"
 GITHUB_CI_FILE="$ROOT_DIR/examples/ci/github-actions-upload.yml"
 GITLAB_CI_FILE="$ROOT_DIR/examples/ci/gitlab-ci-upload.yml"
 GITHUB_REPOSITORY_GUIDE_FILE="$ROOT_DIR/docs/github-repository.md"
+RELEASE_GUIDE_FILE="$ROOT_DIR/docs/release-guide.md"
 GITHUB_WORKFLOW_CI_FILE="$ROOT_DIR/.github/workflows/ci.yml"
 GITHUB_WORKFLOW_COMPOSE_FILE="$ROOT_DIR/.github/workflows/compose-smoke.yml"
 
@@ -51,6 +52,7 @@ assert_repo_has_no_placeholders() {
     "$ARCHITECTURE_FILE" \
     "$CONFIG_FILE" \
     "$GITHUB_REPOSITORY_GUIDE_FILE" \
+    "$RELEASE_GUIDE_FILE" \
     "$ROOT_DIR/examples/ci" \
     "$ROOT_DIR/.github/workflows"; then
     echo 'found TODO/TBD placeholder text in docs or CI examples' >&2
@@ -80,6 +82,7 @@ main() {
   assert_non_empty_file "$GITHUB_CI_FILE"
   assert_non_empty_file "$GITLAB_CI_FILE"
   assert_non_empty_file "$GITHUB_REPOSITORY_GUIDE_FILE"
+  assert_non_empty_file "$RELEASE_GUIDE_FILE"
   assert_non_empty_file "$GITHUB_WORKFLOW_CI_FILE"
   assert_non_empty_file "$GITHUB_WORKFLOW_COMPOSE_FILE"
 
@@ -99,6 +102,7 @@ main() {
   assert_file_contains "$README_FILE" '[docs/configuration.md](docs/configuration.md)' 'README should link to the configuration guide'
   assert_file_contains "$README_FILE" '## GitHub repository baseline' 'README should explain the repository-level GitHub baseline'
   assert_file_contains "$README_FILE" '[docs/github-repository.md](docs/github-repository.md)' 'README should link to the GitHub repository guide'
+  assert_file_contains "$README_FILE" '[docs/release-guide.md](docs/release-guide.md)' 'README should link to the release guide'
   assert_file_contains "$README_FILE" '[CONTRIBUTING.md](CONTRIBUTING.md)' 'README should link to CONTRIBUTING.md'
   assert_file_contains "$README_FILE" '[examples/ci/](examples/ci/)' 'README should link to the CI examples directory'
 
@@ -127,6 +131,15 @@ main() {
   assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '.github/workflows/compose-smoke.yml' 'GitHub repository guide should reference the Compose smoke workflow'
   assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'Do **not** add a full release workflow yet.' 'GitHub repository guide should document the deferred release stance'
   assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" 'Single-binary service for publishing Allure reports without turning your CI runner into a report host.' 'GitHub repository guide should include the proposed repository description'
+  assert_file_contains "$GITHUB_REPOSITORY_GUIDE_FILE" '[docs/release-guide.md](release-guide.md)' 'GitHub repository guide should link to the release guide'
+
+  log "checking release guide"
+  assert_file_contains "$RELEASE_GUIDE_FILE" '## Current release policy' 'Release guide should explain the current release policy'
+  assert_file_contains "$RELEASE_GUIDE_FILE" 'go test ./... -p 1' 'Release guide should require the Go test suite'
+  assert_file_contains "$RELEASE_GUIDE_FILE" 'bash scripts/verify-docs-and-ci.sh' 'Release guide should require docs verification'
+  assert_file_contains "$RELEASE_GUIDE_FILE" 'bash scripts/verify-helm-chart.sh' 'Release guide should require Helm verification'
+  assert_file_contains "$RELEASE_GUIDE_FILE" 'bash scripts/verify-compose-e2e.sh' 'Release guide should require Compose verification'
+  assert_file_contains "$RELEASE_GUIDE_FILE" 'git tag -a vX.Y.Z -m "vX.Y.Z"' 'Release guide should document annotated tag creation'
 
   log "parsing CI example and workflow YAML"
   parse_ci_yaml
